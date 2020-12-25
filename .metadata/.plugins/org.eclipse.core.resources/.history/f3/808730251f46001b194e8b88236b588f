@@ -1,0 +1,5 @@
+package com.crud_java_spring.controller;
+
+public class UsuarioController {
+
+}
