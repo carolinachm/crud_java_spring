@@ -1,67 +1,72 @@
 package com.crud_java_spring.controller;
 
+import com.crud_java_spring.DTO.UsuarioDTO;
+import com.crud_java_spring.exception.ErroAutenticacao;
+import com.crud_java_spring.exception.RegraNegocioException;
+import com.crud_java_spring.model.Usuario;
+import com.crud_java_spring.service.CepService;
+import com.crud_java_spring.service.UsuarioService;
+
+import org.apache.catalina.connector.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
-import com.crud_java_spring.exception.UsuarioNãoEncontradoException;
-import com.crud_java_spring.model.Usuario;
-import com.crud_java_spring.repostiory.UsuarioRepository;
-
-
 @RestController
-@RequestMapping("/usuarios")
+@RequestMapping("/api/usuarios")
 public class UsuarioController {
+
 	
+	private UsuarioService usuarioService;
+
 	@Autowired
-	public UsuarioRepository usuarioRepository;
+	private CepService cepService;
 
 
-	@GetMapping
-	public List<Usuario> buscarTodos(){
-		return usuarioRepository.findAll();
+
+	public UsuarioController(UsuarioService usuarioService) {
+		this.usuarioService = usuarioService;
 	}
-	
-	@PostMapping("/auth")
-	public List<Usuario> autenticar(@RequestBody Usuario usuario ) throws UsuarioNãoEncontradoException {
+	@PostMapping("/autenticar")
+	public ResponseEntity autenticar(@RequestBody UsuarioDTO dto){
+		try {
+			Usuario usuarioAutenticado = usuarioService.autenticar(dto.getEmail(), dto.getSenha());
+			return ResponseEntity.ok(usuarioAutenticado);
 
-		List<Usuario> usuarios = usuarioRepository.findByNomeAndSenha(usuario.getNome(), usuario.getSenha());
-
-		if(usuarios == null || usuarios.size() == 0){
-			throw new UsuarioNãoEncontradoException();
-		}else{
-			return usuarios;
+		} catch (ErroAutenticacao e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
 		}
-	}
+		
 
-	@PostMapping
-	public Usuario salvarUsuairo(@RequestBody Usuario usuario){
-		return usuarioRepository.save(usuario);
 	}
-	@PutMapping()
-	public Usuario alterarUsuairo(@RequestBody Usuario usuario){
-		return usuarioRepository.save(usuario);
-	}
-	@DeleteMapping("/{id}")
-	public void excluirUsuairo(@PathVariable("id") Long id){
-		usuarioRepository.deleteById(id);
-	}
-	@GetMapping("/q/perfil")
-	List<Usuario> buscarPorPerfil(@RequestParam ("descricao") String descricao){
-		return usuarioRepository.findByPerfilDescricao(descricao);
-	}
-
 	
+	@PostMapping
+	public ResponseEntity salvar(@RequestBody UsuarioDTO dto){
+
+		Usuario usuario = Usuario.builder()
+				.nome(dto.getNome())
+				.email(dto.getEmail())
+				.cpf(dto.getCpf())
+				.senha(dto.getSenha())
+				.telefone(dto.getTelefone())
+				.endereco(dto.getEndereco())
+				.build();
+
+		try {
+			Usuario usuarioSalvo = usuarioService.salvaUsuario(usuario);
+			return new ResponseEntity(usuarioSalvo, HttpStatus.CREATED);
+		} catch (RegraNegocioException e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
+		}
+
 	}
+	
+	
+}
 
 
 
